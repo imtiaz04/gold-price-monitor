@@ -7,6 +7,7 @@ DB_PATH = Path(__file__).resolve().parent / "gold_prices.db"
 
 
 def initialize_tables(connection):
+    # USA MARKET TABLE - XAU/USD spot gold
     connection.execute("""
         CREATE TABLE IF NOT EXISTS readings (
             id INTEGER PRIMARY KEY,
@@ -15,7 +16,7 @@ def initialize_tables(connection):
             checked_at TEXT NOT NULL
         )
     """)
-
+ # TELEGRAM ALERT QUEUE - shared by USA and India markets
     connection.execute("""
         CREATE TABLE IF NOT EXISTS pending_alerts (
             id INTEGER PRIMARY KEY,
@@ -23,9 +24,20 @@ def initialize_tables(connection):
             created_at TEXT NOT NULL,
             sent_at TEXT
         )
-    """)
+""")
+ # INDIA MARKET TABLE - Hyderabad 24K and 22K gold in INR
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS india_readings (
+            id INTEGER PRIMARY KEY,
+            city TEXT NOT NULL,
+            price_24k REAL NOT NULL,
+            price_22k REAL NOT NULL,
+            source_date TEXT NOT NULL,
+            checked_at TEXT NOT NULL
+        )
+""")
 
-
+# USA MARKET - save XAU/USD reading and queue price-change alert
 def save_reading(price, updated_at, threshold):
     with sqlite3.connect(DB_PATH) as connection:
         initialize_tables(connection)
@@ -80,7 +92,7 @@ def save_reading(price, updated_at, threshold):
 
         return previous, True
 
-
+# SHARED ALERT QUEUE - retrieve unsent USA/India Telegram alerts
 def get_pending_alerts():
     with sqlite3.connect(DB_PATH) as connection:
         initialize_tables(connection)
@@ -92,7 +104,7 @@ def get_pending_alerts():
             ORDER BY id
         """).fetchall()
 
-
+# SHARED ALERT QUEUE - mark Telegram alert as successfully delivered
 def mark_alert_sent(alert_id):
     with sqlite3.connect(DB_PATH) as connection:
         connection.execute("""
