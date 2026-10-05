@@ -91,6 +91,80 @@ def save_reading(price, updated_at, threshold):
                 """, (message, checked_at))
 
         return previous, True
+    
+# INDIA MARKET - save Hyderabad 24K/22K reading and queue price-change alert
+def save_india_reading(city, price_24k, price_22k, source_date):
+    with sqlite3.connect(DB_PATH) as connection:
+        initialize_tables(connection)
+        connection.execute("BEGIN IMMEDIATE")
+
+        previous = connection.execute("""
+            SELECT price_24k, price_22k, source_date
+            FROM india_readings
+            WHERE city = ?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (city,)).fetchone()
+
+        checked_at = datetime.now(ZoneInfo("UTC")).isoformat()
+
+        # Do not insert the same market date and prices repeatedly.
+        if (
+            previous
+            and previous[2] == source_date
+            and previous[0] == price_24k
+            and previous[1] == price_22k
+        ):
+            return previous, False
+
+        connection.execute("""
+            INSERT INTO india_readings (
+                city,
+                price_24k,
+                price_22k,
+                source_date,
+                checked_at
+            ) VALUES (?, ?, ?, ?, ?)
+        """, (
+            city,
+            price_24k,
+            price_22k,
+            source_date,
+            checked_at,
+        ))
+
+        if previous:
+            change_24k = price_24k - previous[0]
+            change_22k = price_22k - previous[1]
+
+            if change_24k != 0 or change_22k != 0:
+                percentage_24k = (change_24k / previous[0]) * 100
+                percentage_22k = (change_22k / previous[1]) * 100
+
+                message = (
+                    f"🇮🇳 Hyderabad Gold Alert\n\n"
+                    f"24K / 10g\n"
+                    f"Previous: ₹{previous[0]:,.0f}\n"
+                    f"Current: ₹{price_24k:,.0f}\n"
+                    f"Change: {'+' if change_24k > 0 else '-'}₹{abs(change_24k):,.0f} "
+                    f"({percentage_24k:+.3f}%)\n\n"
+                    f"22K / 10g\n"
+                    f"Previous: ₹{previous[1]:,.0f}\n"
+                    f"Current: ₹{price_22k:,.0f}\n"
+                    f"Change: {'+' if change_22k > 0 else '-'}₹{abs(change_22k):,.0f} "
+                    f"({percentage_22k:+.3f}%)\n\n"
+                    f"Market: {city}\n"
+                    f"Market date: {source_date}"
+                )
+
+                connection.execute("""
+                    INSERT INTO pending_alerts (
+                        message,
+                        created_at
+                    ) VALUES (?, ?)
+                """, (message, checked_at))
+
+        return previous, True    
 
 # SHARED ALERT QUEUE - retrieve unsent USA/India Telegram alerts
 def get_pending_alerts():
