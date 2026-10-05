@@ -56,7 +56,7 @@ def save_reading(price, updated_at, threshold):
         if previous:
             change = price - previous[0]
 
-            if abs(change) >= threshold:
+            if change != 0:
                 direction = "UP" if change > 0 else "DOWN"
                 percentage = (change / previous[0]) * 100
                 local_time = updated_at.astimezone(
