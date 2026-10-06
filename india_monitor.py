@@ -9,7 +9,7 @@ from notifications import load_credentials, send_telegram_alert
 
 
 def deliver_pending_alerts():
-    for alert_id, message in get_pending_alerts():
+    for alert_id, message in get_pending_alerts("INDIA"):
         print(f"Delivering queued alert #{alert_id}")
         send_telegram_alert(message)
         mark_alert_sent(alert_id)

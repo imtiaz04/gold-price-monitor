@@ -17,7 +17,7 @@ from price_api import fetch_gold_price
 ALERT_THRESHOLD_USD = 1.0
 
 def deliver_pending_alerts():
-    for alert_id, message in get_pending_alerts():
+    for alert_id, message in get_pending_alerts("USA"):
         print(f"Delivering queued alert #{alert_id}")
         send_telegram_alert(message)
         mark_alert_sent(alert_id)
