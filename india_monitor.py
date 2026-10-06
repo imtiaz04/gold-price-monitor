@@ -1,5 +1,3 @@
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from database import (
     get_pending_alerts,
@@ -28,9 +26,7 @@ def main():
         price_22k = prices["22k_per_10g"]
 
         # GoodReturns data is currently treated as a daily market price.
-        source_date = datetime.now(
-            ZoneInfo("Asia/Kolkata")
-        ).date().isoformat()
+        source_date = prices["source_date"]
 
         print(f"City: {city}")
         print(f"24K: ₹{price_24k:,.0f} per 10g")
